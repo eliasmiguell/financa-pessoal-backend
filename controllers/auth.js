@@ -43,7 +43,12 @@ try {
 }
   
 }
-
+export const logout = (req, res)=>{
+  return res
+    .clearCookie("accessToken", {secure :true, samesSite:"none"})
+    .clearCookie("refreshToken", {secure :true, samesSite:"none"})
+    .status(200).json({message:"Logout efetuado com sucesso"})
+}
 
 
 export const login = async (req, res)=>{
