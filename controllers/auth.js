@@ -3,9 +3,9 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
 export const register = async (req, res) => {
-  const { username, email, password, confirmPassword } = req.body;
-
-  if (!username) {
+  const { name, email, password, confirmPassword } = req.body;
+ 
+  if (!name) {
     return res.status(422).json({ message: "O nome é Obrigatório" })
   }
   if (!email) {
@@ -32,7 +32,7 @@ export const register = async (req, res) => {
 
     const user = await prisma.user.create({
       data: {
-        name: username,
+        name: name,
         email,
         password: passwordHash
       }

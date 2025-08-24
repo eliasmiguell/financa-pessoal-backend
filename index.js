@@ -13,10 +13,10 @@ import receitaRoute from './routes/receita.js';
 
 dotenv.config();
 const app = express()
-const port = process.env.PORT || 8003;
+const port = process.env.PORT || 8004;
 
 const corsOptions = {
-  origin: 'http://localhost:3000',
+  origin: ['https://front-end-financa-pessoal-ycvr.vercel.app', 'http://localhost:3000'],
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: [
