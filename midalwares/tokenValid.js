@@ -1,18 +1,19 @@
 import jwt from 'jsonwebtoken';
 
-export const ckeckToken =(req,res, next)=>{
-  const authHeader = req.headers.cookie?.split("; ")[0]
-  const token = authHeader && authHeader.split('=')[1]
+export const checkToken = (req, res, next) => {
+  const authHeader = req.headers.cookie?.split("; ")[0];
+  const token = authHeader && authHeader.split('=')[1];
 
-  if(token){
+  if (token) {
     try {
-      jwt.verify(token, process.env.TOKEN)
-      next()
+      const decoded = jwt.verify(token, process.env.TOKEN);
+      req.userId = decoded.id; // Adicionar o ID do usuário ao request
+      next();
     } catch (err) {
-      console.log(err)
-      res.status(400).json({message: "Token invalido"})
+      console.log(err);
+      res.status(400).json({ message: "Token inválido" });
     }
-  }else{
-    return res.status(401).json({masseg:"Acesso negado."})
+  } else {
+    return res.status(401).json({ message: "Acesso negado." });
   }
-}
+};

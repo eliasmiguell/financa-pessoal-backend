@@ -1,18 +1,18 @@
-import jwt from 'jsonwebtoken'
+import jwt from "jsonwebtoken";
 
-export const  checkRefreshToken =(req,res, next)=>{
-  const authHeader = req.headers.cookie?.split("; ")[1]
-  const refresh = authHeader && authHeader.split('=')[1]
+export const checkRefreshToken = (req, res, next) => {
+  const refresh = req.cookies.refreshToken; // cookie-parser já parseia pra você
 
-  if(refresh){
-    try {
-      jwt.verify(refresh, process.env.REFRESH)
-      next()
-    } catch (err) {
-      console.log(err)
-      res.status(400).json({message: "Token invalido"})
-    }
-  }else{
-    return res.status(401).json({masseg:"Acesso negado."})
+  if (!refresh) {
+    return res.status(401).json({ message: "Refresh token não fornecido" });
   }
-}
+
+  try {
+    const decoded = jwt.verify(refresh, process.env.REFRESH);
+    req.userId = decoded.id; // guarda o ID do usuário no request
+    next();
+  } catch (err) {
+    console.error("Erro ao verificar refresh token:", err);
+    return res.status(400).json({ message: "Refresh token inválido" });
+  }
+};

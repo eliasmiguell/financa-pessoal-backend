@@ -1,0 +1,318 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Tabela de usuários
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relacionamentos com finanças pessoais
+  personalExpenses     PersonalExpense[]
+  personalIncomes      PersonalIncome[]
+  personalBudgets      PersonalBudget[]
+  expenseCategories    ExpenseCategory[]
+  financialGoals       FinancialGoal[]
+  
+  // Relacionamentos com empreendimentos
+  businesses          Business[]
+  
+  @@map("users")
+}
+
+// ===== FINANÇAS PESSOAIS =====
+
+// Categorias de despesas
+model ExpenseCategory {
+  id          String   @id @default(cuid())
+  name        String   // diversão/entretenimento, casa, vestuário, investimentos, impostos, etc.
+  color       String   @default("#3B82F6") // cor para o gráfico
+  icon        String?  // ícone para a categoria
+  budget      Float    @default(0) // orçamento mensal para esta categoria
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expenses    PersonalExpense[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("expense_categories")
+}
+
+// Despesas pessoais
+model PersonalExpense {
+  id          String   @id @default(cuid())
+  description String
+  amount      Float
+  type        ExpenseType // FIXA, IMPREVISTA, PENDENTE
+  status      ExpenseStatus // PAGO, PENDENTE, ATRASADO
+  categoryId  String?
+  category    ExpenseCategory? @relation(fields: [categoryId], references: [id])
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dueDate     DateTime?
+  paidDate    DateTime?
+  isRecurring Boolean  @default(false) // se é uma despesa recorrente
+  recurringInterval String? // "MENSAL", "SEMANAL", "ANUAL"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("personal_expenses")
+}
+
+// Receitas pessoais
+model PersonalIncome {
+  id          String   @id @default(cuid())
+  description String
+  amount      Float
+  type        IncomeType // SALARIO, EXTRA, INVESTIMENTO, OUTRO
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  receivedDate DateTime?
+  isRecurring Boolean  @default(false) // se é uma receita recorrente
+  recurringInterval String? // "MENSAL", "SEMANAL", "ANUAL"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("personal_incomes")
+}
+
+// Orçamentos pessoais
+model PersonalBudget {
+  id          String   @id @default(cuid())
+  month       Int      // 1-12
+  year        Int
+  totalIncome Float    @default(0)
+  totalExpenses Float  @default(0)
+  balance     Float    @default(0) // saldo (positivo ou negativo)
+  savings     Float    @default(0) // economia
+  emergencyFund Float  @default(0) // fundo de emergência
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, month, year])
+  @@map("personal_budgets")
+}
+
+// Metas financeiras
+model FinancialGoal {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  targetAmount Float
+  currentAmount Float  @default(0)
+  deadline    DateTime?
+  priority    GoalPriority @default(MEDIA)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("financial_goals")
+}
+
+// ===== EMPREENDIMENTOS AUTÔNOMOS =====
+
+// Negócios/Empreendimentos
+model Business {
+  id          String   @id @default(cuid())
+  name        String   // "Salão de Beleza", "Maquiagem", etc.
+  description String?
+  type        BusinessType // SALAO, MAQUIAGEM, OUTRO
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  materials   BusinessMaterial[]
+  services    BusinessService[]
+  expenses    BusinessExpense[]
+  incomes     BusinessIncome[]
+  clients     BusinessClient[]
+  budgets     BusinessBudget[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("businesses")
+}
+
+// Materiais do negócio
+model BusinessMaterial {
+  id          String   @id @default(cuid())
+  name        String   // "Base", "Pó", "Batom", etc.
+  description String?
+  cost        Float    // custo unitário
+  quantity    Float    // quantidade disponível
+  unit        String   // "ml", "g", "unidade", etc.
+  usagePerClient Float? // quantidade usada por cliente (ex: 2ml de base por cliente)
+  minStock    Float    @default(0) // estoque mínimo
+  supplier    String?  // fornecedor
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("business_materials")
+}
+
+// Serviços oferecidos
+model BusinessService {
+  id          String   @id @default(cuid())
+  name        String   // "Maquiagem Completa", "Base", etc.
+  description String?
+  price       Float    // preço cobrado
+  materials   Json     // array de materiais usados com quantidade
+  laborCost   Float    // custo da mão de obra por hora
+  laborHours  Float    @default(1) // horas de trabalho
+  foodCost    Float    @default(0) // custo com alimentação por serviço
+  transportCost Float  @default(0) // custo com transporte por serviço
+  materialCost Float   @default(0) // custo total dos materiais
+  totalCost   Float    // custo total (materiais + mão de obra + alimentação + transporte)
+  profit      Float    // lucro (preço - custo total)
+  profitMargin Float   // margem de lucro em porcentagem
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  incomes     BusinessIncome[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("business_services")
+}
+
+// Despesas do negócio
+model BusinessExpense {
+  id          String   @id @default(cuid())
+  description String
+  amount      Float
+  type        BusinessExpenseType // MATERIAL, ALIMENTACAO, TRANSPORTE, OUTRO
+  category    String?  // categoria da despesa
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  date        DateTime
+  isRecurring Boolean  @default(false)
+  recurringInterval String? // "MENSAL", "SEMANAL", "ANUAL"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("business_expenses")
+}
+
+// Receitas do negócio
+model BusinessIncome {
+  id          String   @id @default(cuid())
+  description String
+  amount      Float
+  serviceId   String?
+  service     BusinessService? @relation(fields: [serviceId], references: [id])
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  clientId    String?
+  client      BusinessClient? @relation(fields: [clientId], references: [id])
+  date        DateTime
+  paymentMethod PaymentMethod @default(DINHEIRO)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("business_incomes")
+}
+
+// Clientes do negócio
+model BusinessClient {
+  id          String   @id @default(cuid())
+  name        String
+  email       String?
+  phone       String?
+  address     String?
+  notes       String?
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  incomes     BusinessIncome[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("business_clients")
+}
+
+// Orçamentos do negócio
+model BusinessBudget {
+  id          String   @id @default(cuid())
+  month       Int
+  year        Int
+  totalIncome Float    @default(0)
+  totalExpenses Float  @default(0)
+  totalProfit Float    @default(0)
+  profitMargin Float   @default(0)
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([businessId, month, year])
+  @@map("business_budgets")
+}
+
+// ===== ENUMS =====
+
+enum ExpenseType {
+  FIXA
+  IMPREVISTA
+  PENDENTE
+}
+
+enum ExpenseStatus {
+  PAGO
+  PENDENTE
+  ATRASADO
+}
+
+enum IncomeType {
+  SALARIO
+  EXTRA
+  INVESTIMENTO
+  OUTRO
+}
+
+enum BusinessExpenseType {
+  MATERIAL
+  ALIMENTACAO
+  TRANSPORTE
+  OUTRO
+}
+
+enum BusinessType {
+  SALAO
+  MAQUIAGEM
+  OUTRO
+}
+
+enum GoalPriority {
+  BAIXA
+  MEDIA
+  ALTA
+  URGENTE
+}
+
+enum PaymentMethod {
+  DINHEIRO
+  PIX
+  CARTAO_CREDITO
+  CARTAO_DEBITO
+  TRANSFERENCIA
+  OUTRO
+}
+
+
