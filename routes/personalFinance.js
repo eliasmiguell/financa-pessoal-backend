@@ -34,6 +34,11 @@ import {
 
 const router = express.Router();
 
+// Rota de teste sem middleware (deve vir ANTES do middleware)
+router.get('/test', (req, res) => {
+  res.json({ message: 'Teste funcionando!' });
+});
+
 // Aplicar middleware de autenticação em todas as rotas
 router.use(authenticateToken);
 

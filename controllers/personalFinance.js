@@ -29,39 +29,38 @@ export const createExpenseCategory = async (req, res) => {
 
 export const getExpenseCategories = async (req, res) => {
   try {
-    const userId = req.user.id;
-
-    const categories = await prisma.expenseCategory.findMany({
-      where: { userId },
-      include: {
-        expenses: {
-          where: {
-            createdAt: {
-              gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-            }
-          }
-        }
+    console.log('=== DEBUG getExpenseCategories ===');
+    console.log('req.user:', req.user);
+    console.log('req.userId:', req.userId);
+    console.log('req.headers:', req.headers);
+    
+    // Temporariamente retornar dados mockados para testar
+    const mockCategories = [
+      {
+        id: '1',
+        name: 'Alimentação',
+        color: '#3B82F6',
+        icon: '🍽️',
+        userId: 'test-user-id',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: '2',
+        name: 'Transporte',
+        color: '#10B981',
+        icon: '🚗',
+        userId: 'test-user-id',
+        createdAt: new Date(),
+        updatedAt: new Date()
       }
-    });
+    ];
 
-    // Calcular gastos por categoria no mês atual
-    const categoriesWithSpending = categories.map(category => {
-      const totalSpent = category.expenses.reduce((sum, expense) => sum + expense.amount, 0);
-      const remainingBudget = category.budget - totalSpent;
-      const percentageUsed = category.budget > 0 ? (totalSpent / category.budget) * 100 : 0;
-
-      return {
-        ...category,
-        totalSpent,
-        remainingBudget,
-        percentageUsed
-      };
-    });
-
-    res.json(categoriesWithSpending);
+    console.log('Retornando categorias mockadas:', mockCategories);
+    res.json(mockCategories);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Erro ao buscar categorias" });
+    console.error('Erro ao buscar categorias:', error);
+    res.status(500).json({ message: "Erro ao buscar categorias", error: error.message });
   }
 };
 
@@ -646,8 +645,9 @@ export const getSavingsSuggestions = async (req, res) => {
       const categoryExpenses = expenses.filter(exp => exp.categoryId === category.id);
       const totalSpent = categoryExpenses.reduce((sum, exp) => sum + exp.amount, 0);
       
-      if (category.budget > 0 && totalSpent > category.budget) {
-        const overspent = totalSpent - category.budget;
+      const budget = category.budget || 0;
+      if (budget > 0 && totalSpent > budget) {
+        const overspent = totalSpent - budget;
         suggestions.push({
           type: 'CATEGORY_OVERSPENT',
           category: category.name,
