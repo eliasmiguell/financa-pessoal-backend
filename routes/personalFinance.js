@@ -19,6 +19,12 @@ import {
   updatePersonalIncome,
   deletePersonalIncome,
   
+  // Metas Financeiras
+  createFinancialGoal,
+  getFinancialGoals,
+  updateFinancialGoal,
+  deleteFinancialGoal,
+  
   // Orçamentos
   getPersonalBudget,
   
@@ -48,6 +54,12 @@ router.post('/incomes', createPersonalIncome);
 router.get('/incomes', getPersonalIncomes);
 router.put('/incomes/:id', updatePersonalIncome);
 router.delete('/incomes/:id', deletePersonalIncome);
+
+// ===== ROTAS DE METAS FINANCEIRAS =====
+router.post('/goals', createFinancialGoal);
+router.get('/goals', getFinancialGoals);
+router.put('/goals/:id', updateFinancialGoal);
+router.delete('/goals/:id', deleteFinancialGoal);
 
 // ===== ROTAS DE ORÇAMENTOS =====
 router.get('/budget', getPersonalBudget);
