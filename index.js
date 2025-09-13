@@ -17,8 +17,7 @@ const port = process.env.PORT || 8004;
 
 const corsOptions = {
   origin: [
-    'https://front-end-financa-pessoal-ycvr.vercel.app', 
-    'https://front-end-financa-pessoal-gwve.vercel.app',
+    'https://financa-pessoal-front.vercel.app',
     'http://localhost:3000'
   ],
   credentials: true,
