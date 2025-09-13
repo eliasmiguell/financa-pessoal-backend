@@ -11,11 +11,13 @@ import {
   createPersonalExpense,
   getPersonalExpenses,
   updatePersonalExpense,
+  getPersonalExpensesById,
   deletePersonalExpense,
   
   // Receitas
   createPersonalIncome,
   getPersonalIncomes,
+  getPersonalIncomesById,
   updatePersonalIncome,
   deletePersonalIncome,
   
@@ -53,10 +55,12 @@ router.post('/expenses', createPersonalExpense);
 router.get('/expenses', getPersonalExpenses);
 router.put('/expenses/:id', updatePersonalExpense);
 router.delete('/expenses/:id', deletePersonalExpense);
+router.get('/expenses/:id', getPersonalExpensesById);
 
 // ===== ROTAS DE RECEITAS =====
 router.post('/incomes', createPersonalIncome);
 router.get('/incomes', getPersonalIncomes);
+router.get('/incomes/:id', getPersonalIncomesById);
 router.put('/incomes/:id', updatePersonalIncome);
 router.delete('/incomes/:id', deletePersonalIncome);
 

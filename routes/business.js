@@ -23,14 +23,17 @@ import {
   // Clientes
   createBusinessClient,
   getBusinessClients,
+  updateBusinessClient,
   
   // Receitas
   createBusinessIncome,
   getBusinessIncomes,
+  updateBusinessIncome,
   
   // Despesas
   createBusinessExpense,
   getBusinessExpenses,
+  updateBusinessExpense,
   
   // Relatórios
   getBusinessAnalytics
@@ -63,14 +66,17 @@ router.delete('/services/:id', deleteBusinessService);
 // ===== ROTAS DE CLIENTES =====
 router.post('/businesses/:businessId/clients', createBusinessClient);
 router.get('/businesses/:businessId/clients', getBusinessClients);
+router.put('/clients/:id', updateBusinessClient);
 
 // ===== ROTAS DE RECEITAS =====
 router.post('/businesses/:businessId/incomes', createBusinessIncome);
 router.get('/businesses/:businessId/incomes', getBusinessIncomes);
+router.put('/incomes/:id', updateBusinessIncome);
 
 // ===== ROTAS DE DESPESAS =====
 router.post('/businesses/:businessId/expenses', createBusinessExpense);
 router.get('/businesses/:businessId/expenses', getBusinessExpenses);
+router.put('/expenses/:id', updateBusinessExpense);
 
 // ===== ROTAS DE RELATÓRIOS =====
 router.get('/businesses/:businessId/analytics', getBusinessAnalytics);

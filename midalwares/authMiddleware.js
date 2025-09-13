@@ -5,10 +5,6 @@ const prisma = new PrismaClient();
 
 export const authenticateToken = async (req, res, next) => {
   try {
-    console.log('=== DEBUG authenticateToken ===');
-    console.log('req.path:', req.path);
-    console.log('req.headers.authorization:', req.headers.authorization);
-    
     // Tentar extrair token de diferentes formas
     let token = null;
     
@@ -29,17 +25,12 @@ export const authenticateToken = async (req, res, next) => {
       token = cookies.accessToken;
     }
 
-    console.log('Token extraído:', token ? 'Presente' : 'Ausente');
-
     if (!token) {
-      console.log('Token não fornecido');
       return res.status(401).json({ message: "Token não fornecido" });
     }
 
-    const decoded = jwt.verify(token, process.env.TOKEN);
-    console.log('Token decodificado:', decoded);
-    
-    // Buscar usuário no banco
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
       select: {
@@ -49,15 +40,11 @@ export const authenticateToken = async (req, res, next) => {
       }
     });
 
-    console.log('Usuário encontrado:', user);
-
     if (!user) {
-      console.log('Usuário não encontrado');
       return res.status(401).json({ message: "Usuário não encontrado" });
     }
 
     req.user = user;
-    console.log('Middleware passou, chamando next()');
     next();
   } catch (err) {
     console.log('Erro de autenticação:', err.message);

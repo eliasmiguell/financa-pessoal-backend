@@ -29,35 +29,44 @@ export const createExpenseCategory = async (req, res) => {
 
 export const getExpenseCategories = async (req, res) => {
   try {
-    console.log('=== DEBUG getExpenseCategories ===');
-    console.log('req.user:', req.user);
-    console.log('req.userId:', req.userId);
-    console.log('req.headers:', req.headers);
+    const userId = req.user.id;
     
-    // Temporariamente retornar dados mockados para testar
-    const mockCategories = [
-      {
-        id: '1',
-        name: 'Alimentação',
-        color: '#3B82F6',
-        icon: '🍽️',
-        userId: 'test-user-id',
-        createdAt: new Date(),
-        updatedAt: new Date()
+    // Buscar categorias do usuário com cálculos de gastos
+    const categories = await prisma.expenseCategory.findMany({
+      where: { userId },
+      include: {
+        expenses: {
+          where: {
+            status: 'PAGO' // Apenas despesas pagas
+          }
+        }
       },
-      {
-        id: '2',
-        name: 'Transporte',
-        color: '#10B981',
-        icon: '🚗',
-        userId: 'test-user-id',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-    ];
+      orderBy: { createdAt: 'desc' }
+    });
 
-    console.log('Retornando categorias mockadas:', mockCategories);
-    res.json(mockCategories);
+    // Calcular totais e percentuais para cada categoria
+    const categoriesWithCalculations = categories.map(category => {
+      const totalSpent = category.expenses.reduce((sum, expense) => sum + expense.amount, 0);
+      const remainingBudget = category.budget - totalSpent;
+      const percentageUsed = category.budget > 0 ? (totalSpent / category.budget) * 100 : 0;
+
+      return {
+        id: category.id,
+        name: category.name,
+        color: category.color,
+        icon: category.icon,
+        budget: category.budget,
+        userId: category.userId,
+        createdAt: category.createdAt,
+        updatedAt: category.updatedAt,
+        totalSpent,
+        remainingBudget,
+        percentageUsed: Math.round(percentageUsed * 10) / 10 // Arredondar para 1 casa decimal
+      };
+    });
+
+    console.log('Categorias encontradas:', categoriesWithCalculations.length);
+    res.json(categoriesWithCalculations);
   } catch (error) {
     console.error('Erro ao buscar categorias:', error);
     res.status(500).json({ message: "Erro ao buscar categorias", error: error.message });
@@ -119,6 +128,7 @@ export const createPersonalExpense = async (req, res) => {
       recurringInterval 
     } = req.body;
     const userId = req.user.id;
+    console.log('req.body', req.body);
 
     const expense = await prisma.personalExpense.create({
       data: {
@@ -290,6 +300,46 @@ export const getPersonalIncomes = async (req, res) => {
     });
 
     res.json(incomes);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Erro ao buscar receitas" });
+  }
+};
+
+export const getPersonalExpensesById = async (req, res) => {
+  try {
+    console.log('req.params', req.params);
+    const { id } = req.params;
+   
+
+    const expense = await prisma.personalExpense.findUnique({
+      where: { id}
+    });
+
+
+    console.log('expense', expense);
+    res.json(expense);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Erro ao buscar despesas" });
+  }
+};
+
+export const getPersonalIncomesById = async (req, res) => {
+  try {
+    console.log('req.params', req.params);
+    const { id } = req.params;
+   
+
+    const income = await prisma.personalIncome.findUnique({
+      where: { id}
+    });
+
+
+    console.log('income', income);
+    res.json(income);
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Erro ao buscar receitas" });

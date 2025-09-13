@@ -87,7 +87,7 @@ export const login = async (req, res) => {
       exp: Math.floor(Date.now() / 1000) + 3600,
       id: user.id
     },
-      process.env.TOKEN,
+      process.env.JWT_SECRET,
       { algorithm: "HS256" }
     );
 
@@ -125,7 +125,7 @@ export const refresh = async (req, res) => {
       exp: Math.floor(Date.now() / 1000) + 3600,
       id: user.id
     },
-      process.env.TOKEN,
+      process.env.JWT_SECRET,
       { algorithm: "HS256" }
     );
 

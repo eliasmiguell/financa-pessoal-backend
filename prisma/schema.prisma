@@ -284,6 +284,8 @@ enum IncomeType {
   EXTRA
   INVESTIMENTO
   OUTRO
+  FREELANCE
+  BONUS
 }
 
 enum BusinessExpenseType {

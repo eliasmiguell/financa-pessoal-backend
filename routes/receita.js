@@ -3,7 +3,7 @@ import { authenticateToken } from '../midalwares/authMiddleware.js';
 import { 
   getSaldoAtual, 
   getUltimasTransacoes, 
-  adicionarReceita 
+  adicionarReceita
 } from '../controllers/receita.js';
 
 const router = express.Router();

@@ -6,7 +6,7 @@ export const checkToken = (req, res, next) => {
 
   if (token) {
     try {
-      const decoded = jwt.verify(token, process.env.TOKEN);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
       req.userId = decoded.id; // Adicionar o ID do usuário ao request
       next();
     } catch (err) {

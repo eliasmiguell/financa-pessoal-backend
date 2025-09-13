@@ -1,24 +1,27 @@
-import { PrismaClient } from '../generated/prisma/index.js';
-
-const prisma = new PrismaClient();
+import { prisma } from '../connect.js';
 
 
 export const createBusiness = async (req, res) => {
   try {
-    const { name, description } = req.body;
-    const userId = req.user.id;
+    const { name, description, type } = req.body;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Usuário não autenticado" });
+    }
 
     const business = await prisma.business.create({
       data: {
         name,
         description,
+        type: type || 'OUTRO',
         userId
       }
     });
 
     res.status(201).json(business);
   } catch (error) {
-    console.error(error);
+    console.error('Erro ao criar negócio:', error);
     res.status(500).json({ message: "Erro ao criar negócio" });
   }
 };
@@ -239,11 +242,15 @@ export const createBusinessService = async (req, res) => {
       price, 
       materials, 
       laborCost, 
+      laborHours,
       foodCost, 
-      transportCost 
+      transportCost,
+      materialCost
     } = req.body;
     const { businessId } = req.params;
     const userId = req.user.id;
+
+    console.log('Dados recebidos para criar serviço:', req.body);
 
     // Verificar se o negócio pertence ao usuário
     const business = await prisma.business.findFirst({
@@ -256,38 +263,52 @@ export const createBusinessService = async (req, res) => {
 
     // Calcular custo total dos materiais
     let materialsCost = 0;
-    if (materials && Array.isArray(materials)) {
-      for (const material of materials) {
-        const materialData = await prisma.businessMaterial.findUnique({
-          where: { id: material.materialId }
-        });
-        if (materialData) {
-          materialsCost += (materialData.cost * material.quantity);
+    if (materials) {
+      try {
+        const materialsArray = typeof materials === 'string' ? JSON.parse(materials) : materials;
+        if (Array.isArray(materialsArray)) {
+          for (const material of materialsArray) {
+            if (material.materialId) {
+              const materialData = await prisma.businessMaterial.findUnique({
+                where: { id: material.materialId }
+              });
+              if (materialData) {
+                materialsCost += (materialData.cost * material.quantity);
+              }
+            }
+          }
         }
+      } catch (e) {
+        console.error('Erro ao processar materiais:', e);
+        materialsCost = materialCost || 0;
       }
     }
 
     const totalCost = materialsCost + parseFloat(laborCost) + parseFloat(foodCost || 0) + parseFloat(transportCost || 0);
     const profit = parseFloat(price) - totalCost;
+    const profitMargin = totalCost > 0 ? (profit / parseFloat(price)) * 100 : 0;
 
     const service = await prisma.businessService.create({
       data: {
         name,
         description,
         price: parseFloat(price),
-        materials: materials || [],
+        materials: materials || '[]',
         laborCost: parseFloat(laborCost),
+        laborHours: parseFloat(laborHours || 1),
         foodCost: parseFloat(foodCost || 0),
         transportCost: parseFloat(transportCost || 0),
+        materialCost: materialsCost,
         totalCost,
         profit,
+        profitMargin,
         businessId
       }
     });
 
     res.status(201).json(service);
   } catch (error) {
-    console.error(error);
+    console.error('Erro ao criar serviço:', error);
     res.status(500).json({ message: "Erro ao criar serviço" });
   }
 };
@@ -468,6 +489,42 @@ export const getBusinessClients = async (req, res) => {
   }
 };
 
+export const updateBusinessClient = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, email, phone, address, notes } = req.body;
+    const userId = req.user.id;
+
+    // Verificar se o cliente pertence ao usuário
+    const client = await prisma.businessClient.findFirst({
+      where: { 
+        id,
+        business: { userId }
+      }
+    });
+
+    if (!client) {
+      return res.status(404).json({ message: "Cliente não encontrado" });
+    }
+
+    const updatedClient = await prisma.businessClient.update({
+      where: { id },
+      data: {
+        name,
+        email,
+        phone,
+        address,
+        notes
+      }
+    });
+
+    res.json(updatedClient);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Erro ao atualizar cliente" });
+  }
+};
+
 // ===== RECEITAS DO NEGÓCIO =====
 
 export const createBusinessIncome = async (req, res) => {
@@ -548,6 +605,47 @@ export const getBusinessIncomes = async (req, res) => {
   }
 };
 
+export const updateBusinessIncome = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { description, amount, serviceId, clientId, date, paymentMethod } = req.body;
+    const userId = req.user.id;
+
+    // Verificar se a receita pertence ao usuário
+    const income = await prisma.businessIncome.findFirst({
+      where: { 
+        id,
+        business: { userId }
+      }
+    });
+
+    if (!income) {
+      return res.status(404).json({ message: "Receita não encontrada" });
+    }
+
+    const updatedIncome = await prisma.businessIncome.update({
+      where: { id },
+      data: {
+        description,
+        amount: parseFloat(amount),
+        serviceId,
+        clientId,
+        date: date ? new Date(date) : new Date(),
+        paymentMethod
+      },
+      include: {
+        service: true,
+        client: true
+      }
+    });
+
+    res.json(updatedIncome);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Erro ao atualizar receita" });
+  }
+};
+
 // ===== DESPESAS DO NEGÓCIO =====
 
 export const createBusinessExpense = async (req, res) => {
@@ -616,6 +714,44 @@ export const getBusinessExpenses = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Erro ao buscar despesas" });
+  }
+};
+
+export const updateBusinessExpense = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { description, amount, type, category, date, isRecurring, recurringInterval } = req.body;
+    const userId = req.user.id;
+
+    // Verificar se a despesa pertence ao usuário
+    const expense = await prisma.businessExpense.findFirst({
+      where: { 
+        id,
+        business: { userId }
+      }
+    });
+
+    if (!expense) {
+      return res.status(404).json({ message: "Despesa não encontrada" });
+    }
+
+    const updatedExpense = await prisma.businessExpense.update({
+      where: { id },
+      data: {
+        description,
+        amount: parseFloat(amount),
+        type,
+        category,
+        date: date ? new Date(date) : new Date(),
+        isRecurring: isRecurring || false,
+        recurringInterval
+      }
+    });
+
+    res.json(updatedExpense);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Erro ao atualizar despesa" });
   }
 };
 
