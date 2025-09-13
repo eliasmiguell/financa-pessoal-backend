@@ -144,6 +144,7 @@ model Business {
   incomes     BusinessIncome[]
   clients     BusinessClient[]
   budgets     BusinessBudget[]
+  payments    BusinessPayment[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -187,6 +188,7 @@ model BusinessService {
   businessId  String
   business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   incomes     BusinessIncome[]
+  payments    BusinessPayment[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -224,6 +226,7 @@ model BusinessIncome {
   client      BusinessClient? @relation(fields: [clientId], references: [id])
   date        DateTime
   paymentMethod PaymentMethod @default(DINHEIRO)
+  payments    BusinessPayment[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -241,10 +244,35 @@ model BusinessClient {
   businessId  String
   business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   incomes     BusinessIncome[]
+  payments    BusinessPayment[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@map("business_clients")
+}
+
+// Pagamentos de clientes
+model BusinessPayment {
+  id          String   @id @default(cuid())
+  amount      Float
+  description String
+  status      PaymentStatus @default(PENDING)
+  paymentDate DateTime?
+  dueDate     DateTime?
+  clientId    String
+  client      BusinessClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  serviceId   String?
+  service     BusinessService? @relation(fields: [serviceId], references: [id])
+  incomeId    String?  // Vincula a uma receita quando pago
+  income      BusinessIncome? @relation(fields: [incomeId], references: [id])
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  paymentMethod PaymentMethod @default(DINHEIRO)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("business_payments")
 }
 
 // Orçamentos do negócio
@@ -315,6 +343,13 @@ enum PaymentMethod {
   CARTAO_DEBITO
   TRANSFERENCIA
   OUTRO
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
 }
 
 

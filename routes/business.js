@@ -36,7 +36,14 @@ import {
   updateBusinessExpense,
   
   // Relatórios
-  getBusinessAnalytics
+  getBusinessAnalytics,
+  
+  // Pagamentos
+  createBusinessPayment,
+  getBusinessPayments,
+  updateBusinessPayment,
+  markPaymentAsPaid,
+  deleteBusinessPayment
 } from '../controllers/business.js';
 
 const router = express.Router();
@@ -80,5 +87,12 @@ router.put('/expenses/:id', updateBusinessExpense);
 
 // ===== ROTAS DE RELATÓRIOS =====
 router.get('/businesses/:businessId/analytics', getBusinessAnalytics);
+
+// ===== ROTAS DE PAGAMENTOS =====
+router.post('/businesses/:businessId/payments', createBusinessPayment);
+router.get('/businesses/:businessId/payments', getBusinessPayments);
+router.put('/payments/:id', updateBusinessPayment);
+router.put('/payments/:id/mark-paid', markPaymentAsPaid);
+router.delete('/payments/:id', deleteBusinessPayment);
 
 export default router;

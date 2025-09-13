@@ -844,3 +844,236 @@ export const getBusinessAnalytics = async (req, res) => {
     res.status(500).json({ message: "Erro ao gerar relatório" });
   }
 };
+
+// ===== PAGAMENTOS DE CLIENTES =====
+
+export const createBusinessPayment = async (req, res) => {
+  try {
+    const { businessId } = req.params;
+    const { 
+      amount, 
+      description, 
+      clientId, 
+      serviceId, 
+      dueDate, 
+      paymentMethod = 'DINHEIRO',
+      notes 
+    } = req.body;
+    const userId = req.user.id;
+
+    // Verificar se o negócio pertence ao usuário
+    const business = await prisma.business.findFirst({
+      where: { id: businessId, userId }
+    });
+
+    if (!business) {
+      return res.status(404).json({ message: "Negócio não encontrado" });
+    }
+
+    // Verificar se o cliente pertence ao negócio
+    if (clientId) {
+      const client = await prisma.businessClient.findFirst({
+        where: { id: clientId, businessId }
+      });
+
+      if (!client) {
+        return res.status(404).json({ message: "Cliente não encontrado" });
+      }
+    }
+
+    // Verificar se o serviço pertence ao negócio
+    if (serviceId) {
+      const service = await prisma.businessService.findFirst({
+        where: { id: serviceId, businessId }
+      });
+
+      if (!service) {
+        return res.status(404).json({ message: "Serviço não encontrado" });
+      }
+    }
+
+    const payment = await prisma.businessPayment.create({
+      data: {
+        amount: parseFloat(amount),
+        description,
+        clientId,
+        serviceId,
+        dueDate: dueDate ? new Date(dueDate) : null,
+        paymentMethod,
+        notes,
+        businessId
+      },
+      include: {
+        client: true,
+        service: true
+      }
+    });
+
+    res.json(payment);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Erro ao criar pagamento" });
+  }
+};
+
+export const getBusinessPayments = async (req, res) => {
+  try {
+    const { businessId } = req.params;
+    const { status, clientId, serviceId } = req.query;
+    const userId = req.user.id;
+
+    // Verificar se o negócio pertence ao usuário
+    const business = await prisma.business.findFirst({
+      where: { id: businessId, userId }
+    });
+
+    if (!business) {
+      return res.status(404).json({ message: "Negócio não encontrado" });
+    }
+
+    const where = { businessId };
+
+    if (status) where.status = status;
+    if (clientId) where.clientId = clientId;
+    if (serviceId) where.serviceId = serviceId;
+
+    const payments = await prisma.businessPayment.findMany({
+      where,
+      include: {
+        client: true,
+        service: true,
+        income: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    res.json(payments);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Erro ao buscar pagamentos" });
+  }
+};
+
+export const updateBusinessPayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { 
+      amount, 
+      description, 
+      status, 
+      paymentDate, 
+      dueDate, 
+      serviceId, 
+      incomeId, 
+      paymentMethod, 
+      notes 
+    } = req.body;
+    const userId = req.user.id;
+
+    // Verificar se o pagamento pertence ao usuário
+    const payment = await prisma.businessPayment.findFirst({
+      where: { 
+        id,
+        business: { userId }
+      }
+    });
+
+    if (!payment) {
+      return res.status(404).json({ message: "Pagamento não encontrado" });
+    }
+
+    const updateData = {};
+    if (amount !== undefined) updateData.amount = parseFloat(amount);
+    if (description !== undefined) updateData.description = description;
+    if (status !== undefined) updateData.status = status;
+    if (paymentDate !== undefined) updateData.paymentDate = paymentDate ? new Date(paymentDate) : null;
+    if (dueDate !== undefined) updateData.dueDate = dueDate ? new Date(dueDate) : null;
+    if (serviceId !== undefined) updateData.serviceId = serviceId;
+    if (incomeId !== undefined) updateData.incomeId = incomeId;
+    if (paymentMethod !== undefined) updateData.paymentMethod = paymentMethod;
+    if (notes !== undefined) updateData.notes = notes;
+
+    const updatedPayment = await prisma.businessPayment.update({
+      where: { id },
+      data: updateData,
+      include: {
+        client: true,
+        service: true,
+        income: true
+      }
+    });
+
+    res.json(updatedPayment);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Erro ao atualizar pagamento" });
+  }
+};
+
+export const markPaymentAsPaid = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { incomeId, paymentMethod, paymentDate } = req.body;
+    const userId = req.user.id;
+
+    // Verificar se o pagamento pertence ao usuário
+    const payment = await prisma.businessPayment.findFirst({
+      where: { 
+        id,
+        business: { userId }
+      }
+    });
+
+    if (!payment) {
+      return res.status(404).json({ message: "Pagamento não encontrado" });
+    }
+
+    const updatedPayment = await prisma.businessPayment.update({
+      where: { id },
+      data: {
+        status: 'PAID',
+        paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
+        incomeId: incomeId || null,
+        paymentMethod: paymentMethod || payment.paymentMethod
+      },
+      include: {
+        client: true,
+        service: true,
+        income: true
+      }
+    });
+
+    res.json(updatedPayment);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Erro ao marcar pagamento como pago" });
+  }
+};
+
+export const deleteBusinessPayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    // Verificar se o pagamento pertence ao usuário
+    const payment = await prisma.businessPayment.findFirst({
+      where: { 
+        id,
+        business: { userId }
+      }
+    });
+
+    if (!payment) {
+      return res.status(404).json({ message: "Pagamento não encontrado" });
+    }
+
+    await prisma.businessPayment.delete({
+      where: { id }
+    });
+
+    res.json({ message: "Pagamento deletado com sucesso" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Erro ao deletar pagamento" });
+  }
+};
